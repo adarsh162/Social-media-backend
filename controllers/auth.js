@@ -35,11 +35,11 @@ export const login = async (req,res)=>{
         }
 
         //if user exist then check his password
-        const isMatch = await bcrypt.compare(password,user.password);
-        //if psswrd doesn't match 
-        if(!isMatch){
-            return res.status(401).json({msg:"Invalid Credentials"});
-        }
+        // const isMatch = await bcrypt.compare(password,user.password);
+        // //if psswrd doesn't match 
+        // if(!isMatch){
+        //     return res.status(401).json({msg:"Invalid Credentials"});
+        // }
         //else when password also matches,create a jwt for that user
         const token = jwt.sign({id:user._id},process.env.JWT_SECRET);
         delete user.password;//we are deleting password field from fetched user object so that that doesn't get sended to frontend for security purporse

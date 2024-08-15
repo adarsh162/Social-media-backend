@@ -19,7 +19,10 @@ export const createPost = async (req,res)=>{
             comments : []
         })
         await post.save();
-        const posts = await Post.find();
+        const friends = user.friends;
+        friends.push(userId);
+        console.log("friends : ",friends);
+        const posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
         res.status(201).json(posts);//201 indicates the requested entity was created
     }
     catch(err){
@@ -32,6 +35,19 @@ export const createPost = async (req,res)=>{
 export const getFeedPosts = async (req,res) => {
     try{
         const posts = await Post.find().sort({ createdAt : -1});
+        return res.status(200).json(posts);
+    }
+    catch(err){
+        return res.status(404).json({error:err.message});
+    }
+}
+export const getFriendsPosts = async (req,res) => {
+    try{
+        const {userId} = req.params;
+        const user = await User.findById(userId);
+        const friends = user.friends;
+        friends.push(userId);
+        const posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
         return res.status(200).json(posts);
     }
     catch(err){
