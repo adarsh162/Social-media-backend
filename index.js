@@ -74,7 +74,7 @@ const server = app.listen(PORT,()=>console.log(`Server Port : ${PORT}`));
 const io = new Server(server,{
     pingTimeout: 60000,
     cors: {
-        origin : "http://localhost:3000",
+        origin : "https://social-media-jgiw.onrender.com",
         methods: ['GET', 'POST']
     }
 });
