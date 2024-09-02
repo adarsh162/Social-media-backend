@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Chat from "../models/ChatModel.js";
 
 //Read
 export const getUser = async (req,res)=>{
@@ -98,7 +99,6 @@ export const send_request = async (req, res) => {
 
 export const accept_request = async (req, res) => {
     const {id,friendId} = req.params;
-        const user_id = id;
         const user = await User.findById(id);
         const friend = await User.findById(friendId);
         user.friends.push(friendId);
@@ -114,6 +114,30 @@ export const accept_request = async (req, res) => {
                 return {_id,firstName,lastName,occupation,location,picturePath}
             }
         )
+        var alreadyPresent = await Chat.findOne({
+            isGroupChat: false,
+            users: {  $all: [ id, friendId] },
+        }).populate("users", "-password").populate("latestMessage")
+    
+        alreadyPresent = await User.populate(
+            alreadyPresent, {
+            path: "latestMessage.sender",
+            select: "firstName lastName email picturePath"
+        }
+        );
+        if (!alreadyPresent || alreadyPresent.length <= 0) {
+            var chatData = new Chat({
+                chatName: "sender",
+                isGroupChat: false,
+                users: [id, friendId],
+            });
+            try {
+                await chatData.save();
+            }
+            catch (err) {
+                return res.status(404).json({ error: err.message });
+            }
+        }
         return res.status(200).json(formattedFriends);
 }
 

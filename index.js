@@ -12,11 +12,12 @@ import { register } from "./controllers/auth.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/post.js";
+import chatRoutes from "./routes/chat.js";
+import messageRoutes from "./routes/message.js";
 import { createPost } from "./controllers/post.js";
 import { verifyToken } from "./middleware/auth.js";
-import User from "./models/User.js";
-import {users,posts} from "./data/index.js";
-import Post from "./models/Post.js";
+import { Server } from 'socket.io';
+
 
 //Configurations
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,9 @@ app.post("/posts",verifyToken,upload.single("picture"),createPost);
 app.use("/auth",authRoutes);
 app.use("/users",userRoutes);
 app.use("/posts",postRoutes);
+app.use("/chat", chatRoutes);
+app.use("/msgs", messageRoutes);
+
 //mongoose setup
 const PORT = process.env.PORT || 5001;
 mongoose.connect(process.env.MONGO_URL,{
@@ -60,10 +64,36 @@ mongoose.connect(process.env.MONGO_URL,{
     useUnifiedTopology : true
 }).then(
     ()=>{
-        app.listen(PORT,()=>console.log(`Server Port : ${PORT}`));
-        //User.insertMany(users); adding dummy data
-        //Post.insertMany(posts);
+        console.log(`DB connected !`);
     }
 ).catch((error)=>console.log(error)); 
+
+//create http server and listen it on port
+const server = app.listen(PORT,()=>console.log(`Server Port : ${PORT}`));
+//create socket io server with cors and ping timeout options
+const io = new Server(server,{
+    pingTimeout: 60000,
+    cors: {
+        origin : "http://localhost:3000",
+        methods: ['GET', 'POST']
+    }
+});
+
+io.on("connection", (socket)=>{
+    socket.on("setup", (userData)=>{
+        socket.join(userData._id);
+        socket.emit("connected", userData._id);
+    });
+    socket.on("join room", (roomId)=>{
+        socket.join(roomId);
+    });
+    socket.on("new message", (newMessageRecieved) => {
+        var chat = newMessageRecieved.chat;
+        chat?.users.forEach((user)=>{
+            if(user._id == newMessageRecieved.sender._id)return;
+            socket.in(user._id).emit("message_recieved", newMessageRecieved);
+        });
+    })
+})
 
 

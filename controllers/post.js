@@ -17,12 +17,28 @@ export const createPost = async (req,res)=>{
             picturePath,
             likes : {},
             comments : []
-        })
+        });
         await post.save();
         const friends = user.friends;
         friends.push(userId);
-        console.log("friends : ",friends);
-        const posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
+        //console.log("friends : ",friends);
+        let posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
+        for(let post of posts){
+            if(post.comments){
+                for(let comment of post.comments.keys()){
+                    //console.log(comment);
+                    let user = await User.findById(comment);
+                    user.comment = post.comments[comment];
+                    let obj = {
+                        firstName : user.firstName,
+                        picturePath : user.picturePath,
+                        comment : post.comments.get(comment)
+                    }
+                    //console.log(obj);
+                    post.comments.set(comment,JSON.stringify(obj));
+                }
+            }
+        }
         res.status(201).json(posts);//201 indicates the requested entity was created
     }
     catch(err){
@@ -34,7 +50,23 @@ export const createPost = async (req,res)=>{
 //read
 export const getFeedPosts = async (req,res) => {
     try{
-        const posts = await Post.find().sort({ createdAt : -1});
+        let posts = await Post.find().sort({ createdAt : -1});
+        for(let post of posts){
+            if(post.comments){
+                for(let comment of post.comments.keys()){
+                    //console.log(comment);
+                    let user = await User.findById(comment);
+                    user.comment = post.comments[comment];
+                    let obj = {
+                        firstName : user.firstName,
+                        picturePath : user.picturePath,
+                        comment : post.comments.get(comment)
+                    }
+                    //console.log(obj);
+                    post.comments.set(comment,JSON.stringify(obj));
+                }
+            }
+        }
         return res.status(200).json(posts);
     }
     catch(err){
@@ -47,7 +79,23 @@ export const getFriendsPosts = async (req,res) => {
         const user = await User.findById(userId);
         const friends = user.friends;
         friends.push(userId);
-        const posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
+        let posts = await Post.find({userId:{$in:friends}}).sort({ createdAt : -1});
+        for(let post of posts){
+            if(post.comments){
+                for(let comment of post.comments.keys()){
+                    //console.log(comment);
+                    let user = await User.findById(comment);
+                    user.comment = post.comments[comment];
+                    let obj = {
+                        firstName : user.firstName,
+                        picturePath : user.picturePath,
+                        comment : post.comments.get(comment)
+                    }
+                    //console.log(obj);
+                    post.comments.set(comment,JSON.stringify(obj));
+                }
+            }
+        }
         return res.status(200).json(posts);
     }
     catch(err){
@@ -58,7 +106,24 @@ export const getFriendsPosts = async (req,res) => {
 export const getUserPosts = async (req,res) => {
     try{
         const {userId} = req.params;
-        const posts = await Post.find({userId:userId});
+        let posts = await Post.find({userId:userId});
+        for(let post of posts){
+            if(post.comments){
+                for(let comment of post.comments.keys()){
+                    //console.log(comment);
+                    let user = await User.findById(comment);
+                    user.comment = post.comments[comment];
+                    let obj = {
+                        firstName : user.firstName,
+                        picturePath : user.picturePath,
+                        comment : post.comments.get(comment)
+                    }
+                    //console.log(obj);
+                    post.comments.set(comment,JSON.stringify(obj));
+                }
+            }
+        }
+        //console.log(posts);
         return res.status(200).json(posts);
     }
     catch(err){
@@ -78,11 +143,85 @@ export const likePost = async (req,res)=>{
         else{
             post.likes.set(userId,true);
         }
-        const updatedPost = await Post.findByIdAndUpdate(id,{
+        let updatedPost = await Post.findByIdAndUpdate(id,{
             likes : post.likes
         },{new:true});
+        if(updatedPost.comments){
+                for(let comment of updatedPost.comments.keys()){
+                    //console.log(comment);
+                    let user = await User.findById(comment);
+                    user.comment = updatedPost.comments[comment];
+                    let obj = {
+                        firstName : user.firstName,
+                        picturePath : user.picturePath,
+                        comment : updatedPost.comments.get(comment)
+                    }
+                    //console.log(obj);
+                    updatedPost.comments.set(comment,JSON.stringify(obj));
+                }
+        }
         return res.status(200).json(updatedPost);
 
+    }
+    catch(err){
+        return res.status(404).json({error:err.message});
+    }
+}
+
+export const addComment = async (req,res)=>{
+    try{
+        const {id} = req.params;
+        const {userId,comment} = req.body;
+        const post = await Post.findById(id);
+        post.comments.set(userId,comment);
+        let updatedPost = await Post.findByIdAndUpdate(id,{
+            comments : post.comments
+        },{new:true});
+        if(updatedPost.comments){
+            for(let comment of updatedPost.comments.keys()){
+                //console.log(comment);
+                let user = await User.findById(comment);
+                user.comment = updatedPost.comments[comment];
+                let obj = {
+                    firstName : user.firstName,
+                    picturePath : user.picturePath,
+                    comment : updatedPost.comments.get(comment)
+                }
+                //console.log(obj);
+                updatedPost.comments.set(comment,JSON.stringify(obj));
+            }
+        }
+        return res.status(200).json(updatedPost);
+    }
+    catch(err){
+        return res.status(404).json({error:err.message});
+    }
+}
+
+export const deleteComment = async (req,res)=>{
+    try{
+        const {id} = req.params;
+        const {userId} = req.body;
+        const post = await Post.findById(id);
+        post.comments.delete(userId);
+        let updatedPost = await Post.findByIdAndUpdate(id,{
+            comments : post.comments
+        },{new:true});
+        if(updatedPost.comments){
+            for(let comment of updatedPost.comments.keys()){
+                //console.log(comment);
+                let user = await User.findById(comment);
+                user.comment = updatedPost.comments[comment];
+                let obj = {
+                    firstName : user.firstName,
+                    picturePath : user.picturePath,
+                    comment : updatedPost.comments.get(comment)
+                }
+                //console.log(obj);
+                updatedPost.comments.set(comment,JSON.stringify(obj));
+            }
+        }
+        return res.status(200).json(updatedPost);
     }
     catch(err){
         return res.status(404).json({error:err.message});
